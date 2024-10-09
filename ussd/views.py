@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 # In-memory session storage
 sessions = {}
 
-
 @csrf_exempt
 def ussd(request):
     if request.method == 'POST':
@@ -49,7 +48,7 @@ def ussd(request):
         # Logic 1: Standard Flow (*920*1806#)
         if len(parts) == 2 and parts[0] == '920' and parts[1] == '1806':
             if msgtype:  # First request after dialing *920*1806#
-                msg = "Welcome to USSD Application\n\nHow are you feeling?\n\n1. Feeling fine\n2. Feeling frisky\n3. Not well"
+                msg = f"Welcome to {ussd_id} USSD Application\n\nHow are you feeling?\n\n1. Feeling fine\n2. Feeling frisky\n3. Not well"
                 session['screen'] = 1
                 response_data = {
                     "USERID": ussd_id,
@@ -60,7 +59,6 @@ def ussd(request):
                 logger.info(f"Response: {response_data}")
                 return JsonResponse(response_data)
             else:
-                # If it's not the first message, treat it as invalid since we expect a choice at this point
                 logger.error("Invalid choice in Screen 1 for direct access")
                 return JsonResponse({'error': 'Invalid choice in Screen 1'}, status=400)
 
@@ -95,6 +93,7 @@ def ussd(request):
                 "MSGTYPE": True
             }
             logger.info(f"Response: {response_data}")
+
             return JsonResponse(response_data)
 
         # Handling user input for Screen 2
@@ -130,7 +129,6 @@ def ussd(request):
             logger.info(f"Response: {response_data}")
             return JsonResponse(response_data)
 
-
         # Logic 2: Direct Access (*920*1806*1#)
         elif len(parts) == 3:  # User dialed *920*1806*1#
             logger.info(f"User accessed direct Screen 1 with input: {parts[2]}")
@@ -143,7 +141,17 @@ def ussd(request):
                 session['feeling'] = 'Not well'
             else:
                 logger.error("Invalid choice in Screen 1 for direct access")
-                return JsonResponse({'error': 'Invalid choice in Screen 1'}, status=400)
+                # Return to Screen 1 with invalid choice message
+                msg = "Invalid choice. How are you feeling?\n\n1. Feeling fine\n2. Feeling frisky\n3. Not well"
+                response_data = {
+                    "USERID": ussd_id,
+                    "MSISDN": msisdn,
+                    "MSG": msg,
+                    "MSGTYPE": True
+                }
+                logger.info(f"Response: {response_data}")
+                return JsonResponse(response_data)
+
             # Move to Screen 2
             msg = f"Why are you {session['feeling']}?\n1. Money\n2. Relationship\n3. A lot"
             session['screen'] = 2
@@ -170,7 +178,17 @@ def ussd(request):
                 session['feeling'] = 'Not well'
             else:
                 logger.error("Invalid choice in Screen 1 for automatic summary")
-                return JsonResponse({'error': 'Invalid choice in Screen 1'}, status=400)
+                # Return to Screen 1 with invalid choice message
+                msg = "Invalid choice. How are you feeling?\n\n1. Feeling fine\n2. Feeling frisky\n3. Not well"
+                response_data = {
+                    "USERID": ussd_id,
+                    "MSISDN": msisdn,
+                    "MSG": msg,
+                    "MSGTYPE": True
+                }
+                logger.info(f"Response: {response_data}")
+                return JsonResponse(response_data)
+
             # Handle Screen 2 choice
             if screen2_choice == '1':
                 session['reason'] = 'because of money'
@@ -180,7 +198,17 @@ def ussd(request):
                 session['reason'] = 'because of a lot'
             else:
                 logger.error("Invalid choice in Screen 2 for automatic summary")
-                return JsonResponse({'error': 'Invalid choice in Screen 2'}, status=400)
+                # Return to Screen 2 with invalid choice message
+                msg = f"Invalid choice. Why are you {session['feeling']}?\n1. Money\n2. Relationship\n3. A lot"
+                response_data = {
+                    "USERID": ussd_id,
+                    "MSISDN": msisdn,
+                    "MSG": msg,
+                    "MSGTYPE": True
+                }
+                logger.info(f"Response: {response_data}")
+                return JsonResponse(response_data)
+
             # Display summary
             msg = f"You are {session['feeling']} {session['reason']}."
             response_data = {
@@ -199,3 +227,4 @@ def ussd(request):
     # If request method is not POST, return a 405 Method Not Allowed error
     logger.error("Method not allowed")
     return JsonResponse({'error': 'Method not allowed'}, status=405)
+

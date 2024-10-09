@@ -48,7 +48,7 @@ def ussd(request):
         # Logic 1: Standard Flow (*920*1806#)
         if len(parts) == 2 and parts[0] == '920' and parts[1] == '1806':
             if msgtype:  # First request after dialing *920*1806#
-                msg = f"Welcome to {ussd_id} USSD Application\n\nHow are you feeling?\n\n1. Feeling fine\n2. Feeling frisky\n3. Not well"
+                msg = "Welcome to {ussd_id} USSD Application\n\nHow are you feeling?\n\n1. Feeling fine\n2. Feeling frisky\n3. Not well"
                 session['screen'] = 1
                 response_data = {
                     "USERID": ussd_id,
@@ -93,7 +93,6 @@ def ussd(request):
                 "MSGTYPE": True
             }
             logger.info(f"Response: {response_data}")
-
             return JsonResponse(response_data)
 
         # Handling user input for Screen 2
@@ -117,7 +116,7 @@ def ussd(request):
                 logger.info(f"Response: {response_data}")
                 return JsonResponse(response_data)
 
-            # Display summary and end session
+            # Move to the final summary
             msg = f"You are {session['feeling']} {session['reason']}."
             response_data = {
                 "USERID": ussd_id,
@@ -169,6 +168,7 @@ def ussd(request):
             logger.info(f"User accessed automatic summary with inputs: {parts[2]}, {parts[3]}")
             screen1_choice = parts[2]
             screen2_choice = parts[3]
+
             # Handle Screen 1 choice
             if screen1_choice == '1':
                 session['feeling'] = 'Feeling fine'
@@ -209,7 +209,7 @@ def ussd(request):
                 logger.info(f"Response: {response_data}")
                 return JsonResponse(response_data)
 
-            # Display summary
+            # Display final summary
             msg = f"You are {session['feeling']} {session['reason']}."
             response_data = {
                 "USERID": ussd_id,
@@ -220,11 +220,7 @@ def ussd(request):
             del sessions[session_id]  # End session
             logger.info(f"Response: {response_data}")
             return JsonResponse(response_data)
+
         else:
-            logger.error("Invalid USSD format")
-            return JsonResponse({'error': 'Invalid USSD format'}, status=400)
-
-    # If request method is not POST, return a 405 Method Not Allowed error
-    logger.error("Method not allowed")
-    return JsonResponse({'error': 'Method not allowed'}, status=405)
-
+            logger.error("Invalid USSD flow or input")
+            return JsonResponse({'error': 'Invalid USSD flow'}, status=400)
